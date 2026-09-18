@@ -1,0 +1,24 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Generated data (reproducible from notebooks/01_data_cleaning_and_generation.ipynb
+# + the real CSV in data/raw/). events.csv alone lands around 200MB, well past
+# GitHub's 100MB push limit, so this stays local and out of git on principle
+# even for the smaller files.
+data/processed/
+
+# Environment / secrets
+.env
+
+# macOS
+.DS_Store
+
+# Power BI local cache/lock files (the .pbix itself is committed)
+~$*.pbix
+*.pbix.bak

@@ -1,0 +1,20 @@
+# Core analytics
+pandas==3.0.5
+numpy==2.5.3
+
+# Modeling
+scikit-learn==1.9.1
+
+# Visualization (EDA plots — Power BI handles the dashboard itself)
+matplotlib==3.11.2
+seaborn==0.13.2
+
+# Postgres connectivity
+psycopg2-binary==2.9.13
+SQLAlchemy==2.0.52
+
+# Config
+python-dotenv==1.2.3
+
+# Notebooks
+jupyterlab==4.6.3
