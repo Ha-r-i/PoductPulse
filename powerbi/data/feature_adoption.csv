@@ -1,0 +1,11 @@
+feature_name,unique_users,total_uses,adoption_pct
+Dashboard,7002,530945,76.47
+Reports,6942,442538,75.82
+Integrations,6733,265210,73.54
+TeamManagement,6636,221036,72.48
+API,6561,198176,71.66
+Notifications,6528,176411,71.30
+Exports,6367,132582,69.54
+Search,6356,132794,69.42
+Billing,5918,66313,64.64
+Settings,5529,44313,60.39

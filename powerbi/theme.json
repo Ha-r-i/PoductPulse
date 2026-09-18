@@ -1,0 +1,17 @@
+{
+  "name": "ProductPulse Executive",
+  "dataColors": ["#2E5C8A", "#4C72B0", "#8FAADC", "#55A868", "#C44E52", "#F2B84B", "#8C8C8C", "#1F4E79"],
+  "background": "#FFFFFF",
+  "foreground": "#1A1A1A",
+  "tableAccent": "#2E5C8A",
+  "good": "#55A868",
+  "bad": "#C44E52",
+  "neutral": "#8C8C8C",
+  "visualStyles": {
+    "*": {
+      "*": {
+        "title": [{ "fontColor": { "solid": { "color": "#1F4E79" } }, "bold": true }]
+      }
+    }
+  }
+}
