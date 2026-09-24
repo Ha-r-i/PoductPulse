@@ -22,3 +22,6 @@ data/processed/
 # Power BI local cache/lock files (the .pbix itself is committed)
 ~$*.pbix
 *.pbix.bak
+
+# Additional local environment
+.venv-local/
