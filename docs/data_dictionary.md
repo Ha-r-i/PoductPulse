@@ -1,5 +1,7 @@
 # ProductPulse — Data Dictionary & Source Mapping
 
+**Current status:** The Power BI report is not yet included. Billing/churn dates are reconstructed or simulated, and outcome-conditioned synthetic behavior limits model and business interpretations. See [the review](project_review.md).
+
 ## Approach
 
 ProductPulse blends **real subscription/billing/churn data** with a **calibrated

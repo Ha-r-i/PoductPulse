@@ -1,5 +1,7 @@
 # ProductPulse — Power BI Build Guide
 
+**Current status:** The Power BI report is not yet included. Billing/churn dates are reconstructed or simulated, and outcome-conditioned synthetic behavior limits model and business interpretations. See [the review](../docs/project_review.md).
+
 This wasn't built on this machine (Power BI Desktop doesn't run natively on
 macOS) — this guide plus the files in `powerbi/data/` are everything needed
 to build it on Windows/a VM/Power BI Service. Re-run the queries in

@@ -1,8 +1,9 @@
 # ProductPulse
 
-**End-to-end product analytics and user behavior intelligence platform for a
-B2B SaaS company** — built with SQL, Python, and Power BI on top of a real
-customer dataset. No Spark, no Airflow, no cloud warehouse: this is what one
+**Status: work in progress.** SQL, notebooks, and dashboard exports are present. The Power BI report and a fresh end-to-end verification are pending. See [the review](docs/project_review.md).
+
+**Product analytics portfolio project for a fictional B2B SaaS company** — built with SQL, Python, and Power BI on top of a real
+customer snapshot plus simulated histories. No Spark, no Airflow, no cloud warehouse: this is what one
 analytics engineer can build in 1-2 weeks with PostgreSQL and a laptop.
 
 ## Business Problem
@@ -16,7 +17,7 @@ acquisition channel? Which customers are quietly at risk of churning right
 now?
 
 My job: build the analytics layer connecting all three data sources, answer
-those questions with real SQL analysis, build one genuinely predictive churn
+those questions with real SQL analysis, build one demonstration churn
 model, and ship an executive dashboard a PM can actually use.
 
 ## Tech Stack
@@ -62,8 +63,7 @@ ProductPulse/
 **Real:** [IBM Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)
 (Kaggle, 7,043 customers, 21 columns). Real tenure, contract charges,
 `TotalCharges`, and the churn label drive `users`, `subscriptions`, and
-`payments` — nothing about revenue or churn outcomes in this project is made
-up.
+`payments` — the source charge and churn attributes are real, but payment history and churn timing are reconstructed or simulated.
 
 **Synthetic, and clearly labeled as such:** no public dataset pairs
 row-level product usage with real subscription billing for the same users —
@@ -149,11 +149,10 @@ Full DDL: [`sql/ddl/01_create_tables.sql`](sql/ddl/01_create_tables.sql).
 3. **Python EDA** (`notebooks/02_...ipynb`): retention heatmap, rule-based
    user segmentation, revenue trends, correlation analysis.
 4. **Churn model** (`notebooks/03_...ipynb`): one interpretable Logistic
-   Regression, built on a genuinely forward-looking, leakage-free setup (see
-   below) rather than a naive fit on the current snapshot.
+   Regression, using pre-cutoff features; see the model limitations below.
 5. **Power BI** (`powerbi/`): pre-aggregated CSV exports plus a page-by-page
    build guide, since Power BI Desktop doesn't run natively on macOS —
-   assembled the data and spec here, the report itself on Windows.
+   the report still needs to be assembled and saved on Windows.
 
 ## KPIs & Analyses
 
@@ -170,71 +169,18 @@ Full DDL: [`sql/ddl/01_create_tables.sql`](sql/ddl/01_create_tables.sql).
 | 9 | Feature Adoption | `sql/analysis/09_feature_adoption.sql` |
 | 10 | Churn Rate | `sql/analysis/10_churn_rate.sql` |
 
-## Key Insights
+## Results and limitations
 
-- **Growth:** MRR grew from $32,480 to $319,395/month and MAU from 473 to
-  4,732 over six years of simulated history, with monthly churn holding
-  steady in a healthy 0.75-1.25% range.
-- **The funnel and channel quality tell the same story from both ends.**
-  Referral converts trial-to-paid best (86.6%) and churns least (16.7%
-  lifetime); Paid Social converts worst (70.2%) and churns most (37.4%). A
-  channel that struggles to convert isn't just expensive to acquire from —
-  it's also bringing in customers who don't stick.
-- **Retention drops fastest in the first week, not gradually.** 7-day and
-  30-day retention land in similar ranges across cohorts (~5-15%) — the
-  churn that matters most is happening very early, which points at
-  onboarding, not long-run engagement decay.
-- **Engagement segments predict revenue cleanly.** Power Users are 10.7% of
-  the base but average $4,523 in lifetime revenue vs. $1,095 for Casual
-  Users — a 4x difference driven entirely by usage breadth and frequency,
-  not plan tier.
-- **The churn model's most useful finding contradicted my own assumption
-  going in.** Raw correlation (Module 6 EDA) said recency-of-last-use was
-  the dominant churn signal (r=0.75). A proper leakage-free model — cutoff
-  90 days before the most recent data, features computed only from data up
-  to that cutoff — found plan tier and revenue matter more: Enterprise
-  customers have ~3.4x Basic's churn odds, controlling for behavior. Most of
-  what raw recency appeared to explain turned out to run through tenure and
-  plan riding along with it. Higher-paying accounts face more renewal
-  scrutiny, not less — they are the higher-risk group, not the safer one.
+The saved CSV exports and notebook outputs demonstrate the analytics pipeline on a mixture of real source attributes and simulated histories. They have not been regenerated during the current review.
 
-## Business Recommendations
-
-1. **Shift acquisition spend away from Paid Social and Paid Search toward
-   Referral and Organic Search** — the latter two outperform on both
-   conversion and retention, so this isn't a growth-vs-quality tradeoff.
-2. **Fix onboarding, not long-run engagement.** Since most retention loss
-   happens in the first week, invest in a guided first-7-days experience
-   (e.g. a checklist nudging trial users toward the "Core" features —
-   Dashboard, Reports, Integrations — that `09_feature_adoption.sql` shows
-   over 70% of all users eventually adopt anyway) rather than generic
-   long-term engagement campaigns.
-3. **Build a dedicated Enterprise renewal motion.** The churn model's
-   headline finding — Enterprise customers churn *more*, not less, once
-   behavior is controlled for — suggests renewal risk on the highest-value
-   accounts isn't being proactively managed today.
-4. **Target retention outreach with the model's predicted probabilities, not
-   a fixed rule.** Given the ~2% base rate of near-term churn, rank at-risk
-   accounts by `predict_proba` and route the top 5-10% to customer success,
-   rather than a blanket "contact everyone inactive 30+ days" policy that
-   would flood the team with false positives.
+- Acquisition channels are generated conditional on churn labels. Channel differences reflect generator assumptions and cannot justify real marketing budget decisions.
+- Exact day-7/day-30 activity retention does not measure permanent customer loss or prove that most churn happens in the first week.
+- Usage rates vary by generated plan tier, so engagement/revenue associations do not isolate behavior from plan effects.
+- The churn notebook uses pre-cutoff activity, but outcome-conditioned simulation and future-informed population selection prevent a claim of leakage-free real-world prediction. Its saved ROC-AUC is a demonstration result, not production validation.
 
 ## Power BI Dashboard
 
-Four pages — Executive Overview, User Behaviour, Retention, Conversion
-Funnel — built from the pre-aggregated exports in `powerbi/data/` per
-[`powerbi/BUILD_GUIDE.md`](powerbi/BUILD_GUIDE.md), in a blue/white executive
-theme (`powerbi/theme.json`) matching the accent colors used in the Python
-notebooks' plots.
-
-## Churn Model
-
-One interpretable Logistic Regression (`notebooks/03_churn_model.ipynb`),
-built on a 90-day-cutoff, leakage-free setup rather than predicting the
-current snapshot. ROC-AUC 0.747 on ~100 real churn events — evaluated on
-ROC-AUC and recall/precision rather than accuracy, given a 2.2% base rate.
-Full feature-importance writeup and business-language interpretation in the
-notebook.
+Seven CSV exports, a theme, and a [build guide](powerbi/BUILD_GUIDE.md) are included. The four-page `.pbix` report and screenshots are **not yet included**.
 
 ## Future Improvements
 
@@ -277,3 +223,25 @@ cp .env.example .env   # fill in your local Postgres credentials
 # 5. SQL analyses
 psql -d productpulse -f sql/analysis/01_daily_active_users.sql   # ...etc.
 ```
+
+## Offline validation
+
+Run `python scripts/validate_project.py` from the repository root. This checks notebook syntax, stored errors, source IDs, and saved dashboard consistency without connecting to PostgreSQL. It does not replace an end-to-end run.
+
+## Windows setup
+
+Use Python 3.14 and PostgreSQL. From the repository root:
+
+```powershell
+python -m venv .venv-local
+.\.venv-local\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+# Edit .env with your local database credentials.
+createdb -U postgres productpulse
+psql -U postgres -d productpulse -f sql/ddl/01_create_tables.sql
+.\.venv-local\Scripts\python.exe -m jupyter lab
+```
+
+Use your PostgreSQL username if different and ensure its tools are on PATH. Open the notebooks in order with their working directory set to `notebooks/`. The existing local Unix virtual environment is not portable to Windows.
+
+Use a dedicated database: the DDL drops the project tables, and notebook 01 replaces their data. The source CSV is already included. Regenerating data also requires refreshing the dashboard exports using `sql/exports/` and `sql/analysis/08_cohort_analysis.sql`.
