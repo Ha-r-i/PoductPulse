@@ -111,7 +111,7 @@ erDiagram
         varchar session_id
     }
     SUBSCRIPTIONS {
-        varchar user_id PK_FK
+        varchar user_id PK, FK
         varchar plan
         varchar status
         date trial_start
