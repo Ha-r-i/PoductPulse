@@ -1,95 +1,76 @@
 # ProductPulse
 
-**Status: work in progress.** SQL, notebooks, and dashboard exports are present. The Power BI report and a fresh end-to-end verification are pending. See [the review](docs/project_review.md).
+ProductPulse connects customer accounts, product activity, subscriptions, and payments in a PostgreSQL analytics project. It includes ten SQL analyses, three Python notebooks, a demonstration churn model, and a four-page Power BI report.
 
-**Product analytics portfolio project for a fictional B2B SaaS company** — built with SQL, Python, and Power BI on top of a real
-customer snapshot plus simulated histories. No Spark, no Airflow, no cloud warehouse: this is what one
-analytics engineer can build in 1-2 weeks with PostgreSQL and a laptop.
+[Open the Power BI report](powerbi/ProductPulse_Updated.pbix) ? [Report guide](powerbi/BUILD_GUIDE.md) ? [Data dictionary](docs/data_dictionary.md)
 
-## Business Problem
+## What it answers
 
-A fictional B2B SaaS company collects three things separately — in-app usage
-events, subscription state, and billing history — and nobody has connected
-them. Product managers can't answer basic questions: How many customers are
-actually active? Is revenue growing because of retention or new sales? Where
-in the trial-to-paid journey are people dropping off, and does that differ by
-acquisition channel? Which customers are quietly at risk of churning right
-now?
+- How many customers use the product each day and month?
+- How do recurring revenue and the number of paying customers change over time?
+- Where do users drop out of the signup-to-paid funnel?
+- How does activity retention vary across signup cohorts?
+- Which features are used, and how do customer segments differ?
 
-My job: build the analytics layer connecting all three data sources, answer
-those questions with real SQL analysis, build one demonstration churn
-model, and ship an executive dashboard a PM can actually use.
+## Data
 
-## Tech Stack
+The source is the [IBM Telco Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn): 7,043 customers with tenure, charges, contract details, and churn labels. The CSV is included in `data/raw/`.
 
-| Layer | Tool |
+Product events, trial signups, acquisition channels, and geography are simulated. Payment histories and churn dates are reconstructed from the customer snapshot. The generated dataset has 9,156 accounts and more than three million events. The [data dictionary](docs/data_dictionary.md) explains the mapping and assumptions.
+
+The reporting snapshot is **31 August 2026**.
+
+## Dashboard
+
+Open [ProductPulse_Updated.pbix](powerbi/ProductPulse_Updated.pbix) in Power BI Desktop.
+
+| Page | Contents |
 |---|---|
-| Database | PostgreSQL |
-| Analytics | SQL, Python (pandas, NumPy) |
-| Modeling | scikit-learn (Logistic Regression) |
-| Visualization | Power BI |
-| Version control | Git |
+| Executive Overview | August KPI cards and monthly revenue, activity, and paying-user trends |
+| User Behaviour | Daily users and sessions, a date-range slicer, feature adoption, and country summaries |
+| Retention | Cohort heatmap, average activity retention, and churn by acquisition channel |
+| Conversion Funnel | Signed Up ? Activated ? Paid ? Retained, with exact stage counts |
 
-Deliberately not using Spark, Airflow, Kafka, dbt, or a cloud data warehouse —
-none of them are necessary at this data volume, and using them anyway would
-just be résumé-driven complexity.
+The August exports contain these values:
 
-## Project Structure
+| Metric | Value |
+|---|---:|
+| Monthly recurring revenue | 319,394.60 |
+| Monthly active users | 4,732 |
+| Paying users | 5,199 |
+| Monthly churn rate | 1.25% |
+| Revenue growth from July | 1.21% |
 
-```
+The report includes the ProductPulse theme, an activity date slicer, heatmap colours, and notes on the simulated data. Its report definitions and archive pass offline checks. Reopening and checking the revised file in Power BI Desktop, and capturing the final screenshots, are still pending. See the [report guide](powerbi/BUILD_GUIDE.md).
+
+## Stack and structure
+
+PostgreSQL stores the four core tables. SQL produces the analyses and dashboard summaries. Python uses pandas, NumPy, scikit-learn, matplotlib, and seaborn for generation, exploration, and modelling.
+
+```text
 ProductPulse/
-├── data/
-│   ├── raw/            real IBM Telco Customer Churn CSV (committed, 977KB)
-│   └── processed/       generated CSVs -- gitignored, ~240MB, reproducible
-├── sql/
-│   ├── ddl/             schema (4 tables, PK/FK, CHECK constraints, indexes)
-│   ├── analysis/        the 10 required business analyses
-│   ├── features/        reusable per-user feature tables (EDA + churn model)
-│   └── exports/         pre-aggregated queries feeding the Power BI CSVs
-├── notebooks/
-│   ├── 01_data_cleaning_and_generation.ipynb   real data -> Postgres
-│   ├── 02_exploratory_analysis.ipynb           heatmap, segments, correlation
-│   └── 03_churn_model.ipynb                    the Logistic Regression model
-├── powerbi/
-│   ├── data/             CSV exports the dashboard reads from
-│   ├── theme.json        blue/white executive theme
-│   └── BUILD_GUIDE.md    page-by-page build instructions (DAX, layout)
-└── docs/
-    └── data_dictionary.md   column-by-column real-vs-synthetic source mapping
+??? data/raw/       Source customer CSV
+??? data/processed/ Generated tables; kept out of Git
+??? sql/ddl/        Table definitions and indexes
+??? sql/analysis/   Ten business analyses
+??? sql/features/   User and churn-model features
+??? sql/exports/    Dashboard summary queries
+??? notebooks/     Generation, exploration, and churn model
+??? powerbi/        Report, theme, exports, and build guide
+??? scripts/        Validation and report-formatting tools
+??? docs/           Data dictionary and project notes
 ```
-
-## Dataset
-
-**Real:** [IBM Telco Customer Churn](https://www.kaggle.com/datasets/blastchar/telco-customer-churn)
-(Kaggle, 7,043 customers, 21 columns). Real tenure, contract charges,
-`TotalCharges`, and the churn label drive `users`, `subscriptions`, and
-`payments` — the source charge and churn attributes are real, but payment history and churn timing are reconstructed or simulated.
-
-**Synthetic, and clearly labeled as such:** no public dataset pairs
-row-level product usage with real subscription billing for the same users —
-that combination is commercially sensitive and never released. So the
-`events` table (session-level product usage) is generated, calibrated to each
-real user's actual tenure and churn outcome rather than drawn independently
-of it. A pool of non-converting trial signups is added on top of the real
-(already-paying) Telco base, because Telco alone can't provide a real
-top-of-funnel. Geography and acquisition channel are synthetic too.
-
-Full column-by-column mapping, every constant, and the reasoning behind each
-one: [`docs/data_dictionary.md`](docs/data_dictionary.md).
-
-## Architecture
 
 ```mermaid
 flowchart LR
-    A["IBM Telco CSV<br/>(Kaggle)"] --> B["Python: cleaning &<br/>calibrated generation"]
-    B --> C[("PostgreSQL<br/>4 tables")]
-    C --> D["SQL: 10 business<br/>analyses"]
-    C --> E["Python: EDA &<br/>Logistic Regression"]
-    D --> F["Power BI<br/>4-page dashboard"]
-    E --> F
+    A[Customer CSV] --> B[Python cleaning and generation]
+    B --> C[(PostgreSQL)]
+    C --> D[SQL analyses and summary exports]
+    C --> E[Python exploration and churn model]
+    D --> F[Power BI]
 ```
 
-## Data Model
+## Data model
 
 ```mermaid
 erDiagram
@@ -125,123 +106,88 @@ erDiagram
     }
 ```
 
-Four tables, proper primary/foreign keys, CHECK constraints on `plan` and
-`status`, indexes on every column the analysis queries filter or join on.
-Full DDL: [`sql/ddl/01_create_tables.sql`](sql/ddl/01_create_tables.sql).
+The [schema](sql/ddl/01_create_tables.sql) defines primary and foreign keys, checks on plan and subscription status, and indexes for the analysis queries.
 
-## Methodology
+## Run locally on Windows
 
-1. **Data generation** (`notebooks/01_...ipynb`): real Telco data transformed
-   into the four tables per the mapping in the data dictionary, with a
-   calibrated synthetic event log layered on top. Two real bugs were caught
-   and fixed here by actually running the pipeline and checking whether the
-   numbers made sense, not just whether the code executed — a first pass
-   clipped event history to a trailing window, which would have silently
-   broken retention analysis for older cohorts; a second pass anchored every
-   user's tenure to the snapshot date regardless of churn status, which made
-   every churned customer's payment history run to the present and hid all
-   churn from the monthly churn-rate query. Both are documented in the
-   notebook and in the git history, not papered over.
-2. **SQL analytics** (`sql/analysis/`): the 10 required business analyses,
-   written with CTEs, window functions (`LAG`, `ROW_NUMBER`, `RANK`,
-   `FIRST_VALUE`), `CASE WHEN`, and `DATE_TRUNC` throughout, run against the
-   live 3M+ row dataset and verified against real output at every step.
-3. **Python EDA** (`notebooks/02_...ipynb`): retention heatmap, rule-based
-   user segmentation, revenue trends, correlation analysis.
-4. **Churn model** (`notebooks/03_...ipynb`): one interpretable Logistic
-   Regression, using pre-cutoff features; see the model limitations below.
-5. **Power BI** (`powerbi/`): pre-aggregated CSV exports plus a page-by-page
-   build guide, since Power BI Desktop doesn't run natively on macOS —
-   the report still needs to be assembled and saved on Windows.
+Install Python and PostgreSQL, then open PowerShell in the project folder. Python 3.14 is used by the documented Windows setup. PostgreSQL's `bin` directory must be on PATH to use `createdb` and `psql`.
 
-## KPIs & Analyses
+1. Create a Python environment:
 
-| # | Analysis | File |
-|---|---|---|
-| 1 | Daily Active Users | `sql/analysis/01_daily_active_users.sql` |
-| 2 | Monthly Active Users (+ stickiness) | `sql/analysis/02_monthly_active_users.sql` |
-| 3 | Monthly Recurring Revenue | `sql/analysis/03_monthly_recurring_revenue.sql` |
-| 4 | Paying User Growth | `sql/analysis/04_paying_user_growth.sql` |
-| 5 | Conversion Funnel | `sql/analysis/05_conversion_funnel.sql` |
-| 6 | 7-Day Retention | `sql/analysis/06_retention_7_day.sql` |
-| 7 | 30-Day Retention | `sql/analysis/07_retention_30_day.sql` |
-| 8 | Cohort Analysis | `sql/analysis/08_cohort_analysis.sql` |
-| 9 | Feature Adoption | `sql/analysis/09_feature_adoption.sql` |
-| 10 | Churn Rate | `sql/analysis/10_churn_rate.sql` |
+   ```powershell
+   python -m venv .venv-local
+   .\.venv-local\Scripts\python.exe -m pip install -r requirements.txt
+   ```
 
-## Results and limitations
+2. Create `.env` from `.env.example` if it does not already exist, then enter your local PostgreSQL credentials:
 
-The saved CSV exports and notebook outputs demonstrate the analytics pipeline on a mixture of real source attributes and simulated histories. They have not been regenerated during the current review.
+   ```dotenv
+   PGHOST=localhost
+   PGPORT=5432
+   PGDATABASE=productpulse
+   PGUSER=postgres
+   PGPASSWORD="your_password"
+   ```
 
-- Acquisition channels are generated conditional on churn labels. Channel differences reflect generator assumptions and cannot justify real marketing budget decisions.
-- Exact day-7/day-30 activity retention does not measure permanent customer loss or prove that most churn happens in the first week.
-- Usage rates vary by generated plan tier, so engagement/revenue associations do not isolate behavior from plan effects.
-- The churn notebook uses pre-cutoff activity, but outcome-conditioned simulation and future-informed population selection prevent a claim of leakage-free real-world prediction. Its saved ROC-AUC is a demonstration result, not production validation.
+3. Create a dedicated database and its tables:
 
-## Power BI Dashboard
+   ```powershell
+   createdb -h localhost -U postgres productpulse
+   psql -h localhost -U postgres -d productpulse -v ON_ERROR_STOP=1 -f sql/ddl/01_create_tables.sql
+   ```
 
-Seven CSV exports, a theme, and a [build guide](powerbi/BUILD_GUIDE.md) are included. The four-page `.pbix` report and screenshots are **not yet included**.
+   The schema script recreates the project tables. Notebook 01 replaces their data, so use a database reserved for this project.
 
-## Future Improvements
+4. Start Jupyter from the notebook directory:
 
-- Replace the snapshot-style `subscriptions` table with a proper change-history
-  table (plan upgrades/downgrades, multiple trial attempts) — deliberately out
-  of scope here to keep the schema to four tables as specified.
-- A second, real event dataset (e.g. a GA4 sample export) blended in for
-  comparison, rather than relying on one calibrated synthetic event log.
-- Automate the Power BI refresh against a live Postgres connection once
-  running on a machine that can reach it, instead of static CSV exports.
-- Expand the churn model beyond Logistic Regression (gradient boosting,
-  survival analysis for time-to-churn) once more churn events accumulate —
-  ~100 positives is workable for an interpretable linear model but thin for
-  anything more complex.
-- A proper marketing-attribution "visitor" stage feeding the conversion
-  funnel, once that data exists somewhere connectable (see the funnel's
-  documented deviation in `docs/data_dictionary.md`).
+   ```powershell
+   cd notebooks
+   ..\.venv-local\Scripts\python.exe -m jupyter lab
+   ```
 
-## Reproducing This
+   Run `01_data_cleaning_and_generation.ipynb`, then `02_exploratory_analysis.ipynb`, then `03_churn_model.ipynb`. Their relative paths assume the working directory is `notebooks/`.
 
-```bash
-# 1. Postgres
-createdb productpulse
-psql -d productpulse -f sql/ddl/01_create_tables.sql
+5. From the project root, run any analysis query:
 
-# 2. Python environment
-python3 -m venv .venv
-.venv/bin/pip install -r requirements.txt
-cp .env.example .env   # fill in your local Postgres credentials
+   ```powershell
+   psql -h localhost -U postgres -d productpulse -f sql/analysis/01_daily_active_users.sql
+   ```
 
-# 3. Get the real dataset
-# Download from https://www.kaggle.com/datasets/blastchar/telco-customer-churn
-# and place WA_Fn-UseC_-Telco-Customer-Churn.csv in data/raw/
+6. Refresh the dashboard exports and the Power BI report using the [report guide](powerbi/BUILD_GUIDE.md#refresh-the-csvs).
 
-# 4. Run the notebooks in order
-.venv/bin/jupyter nbconvert --to notebook --execute --inplace notebooks/01_data_cleaning_and_generation.ipynb
-.venv/bin/jupyter nbconvert --to notebook --execute --inplace notebooks/02_exploratory_analysis.ipynb
-.venv/bin/jupyter nbconvert --to notebook --execute --inplace notebooks/03_churn_model.ipynb
+For macOS or Linux, create a virtual environment with `python3 -m venv .venv` and use `.venv/bin/python` for the equivalent Python commands. Create the same `.env` and PostgreSQL database. Power BI Desktop requires Windows.
 
-# 5. SQL analyses
-psql -d productpulse -f sql/analysis/01_daily_active_users.sql   # ...etc.
-```
+## SQL analyses
 
-## Offline validation
+| Analysis | Query |
+|---|---|
+| Daily active users | [01_daily_active_users.sql](sql/analysis/01_daily_active_users.sql) |
+| Monthly active users and stickiness | [02_monthly_active_users.sql](sql/analysis/02_monthly_active_users.sql) |
+| Monthly recurring revenue | [03_monthly_recurring_revenue.sql](sql/analysis/03_monthly_recurring_revenue.sql) |
+| Paying-user growth | [04_paying_user_growth.sql](sql/analysis/04_paying_user_growth.sql) |
+| Conversion funnel | [05_conversion_funnel.sql](sql/analysis/05_conversion_funnel.sql) |
+| Seven-day activity retention | [06_retention_7_day.sql](sql/analysis/06_retention_7_day.sql) |
+| Thirty-day activity retention | [07_retention_30_day.sql](sql/analysis/07_retention_30_day.sql) |
+| Cohort retention | [08_cohort_analysis.sql](sql/analysis/08_cohort_analysis.sql) |
+| Feature adoption | [09_feature_adoption.sql](sql/analysis/09_feature_adoption.sql) |
+| Churn rate | [10_churn_rate.sql](sql/analysis/10_churn_rate.sql) |
 
-Run `python scripts/validate_project.py` from the repository root. This checks notebook syntax, stored errors, source IDs, and saved dashboard consistency without connecting to PostgreSQL. It does not replace an end-to-end run.
+## Validation and limits
 
-## Windows setup
-
-Use Python 3.14 and PostgreSQL. From the repository root:
+Run the offline checks from the project root:
 
 ```powershell
-python -m venv .venv-local
-.\.venv-local\Scripts\python.exe -m pip install -r requirements.txt
-Copy-Item .env.example .env
-# Edit .env with your local database credentials.
-createdb -U postgres productpulse
-psql -U postgres -d productpulse -f sql/ddl/01_create_tables.sql
-.\.venv-local\Scripts\python.exe -m jupyter lab
+python scripts/validate_project.py
 ```
 
-Use your PostgreSQL username if different and ensure its tools are on PATH. Open the notebooks in order with their working directory set to `notebooks/`. The existing local Unix virtual environment is not portable to Windows.
+These check the notebooks, source IDs, saved exports, theme, and report package. They do not execute the notebooks, query PostgreSQL, or render Power BI visuals.
 
-Use a dedicated database: the DDL drops the project tables, and notebook 01 replaces their data. The source CSV is already included. Regenerating data also requires refreshing the dashboard exports using `sql/exports/` and `sql/analysis/08_cohort_analysis.sql`.
+A few limits matter when reading the results:
+
+- Channels and usage histories are generated using churn outcomes. Differences between channels and model scores reflect these assumptions; they are not evidence for marketing spend or production predictions.
+- Cohort retention measures activity in a calendar month. Day-7 and day-30 activity do not establish when a customer permanently churned.
+- The generator can create activity after the snapshot. Report filters exclude those dates, but the underlying histories still need correction and regeneration. The late-August activity spike also needs investigation.
+- Subscription state is a snapshot rather than a full history. Model eligibility can depend on information observed after the prediction cutoff.
+- Database loads commit in separate steps. A failed load can leave partial tables; an atomic refresh is still needed.
+
+Further details are in [project notes](docs/project_review.md).

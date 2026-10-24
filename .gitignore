@@ -25,3 +25,11 @@ data/processed/
 
 # Additional local environment
 .venv-local/
+
+# Original local report and staging copies
+/powerbi/ProductPulse.pbix
+/powerbi/ProductPulse_Review.pbix
+
+# Local interview notes
+/ProductPulse_Explanation_and_Interview_Guide*.pdf
+/ProductPulse_Run_and_Corrections_Guide.pdf

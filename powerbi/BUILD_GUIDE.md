@@ -1,108 +1,103 @@
-# ProductPulse — Power BI Build Guide
+# Power BI report guide
 
-**Current status:** The Power BI report is not yet included. Billing/churn dates are reconstructed or simulated, and outcome-conditioned synthetic behavior limits model and business interpretations. See [the review](../docs/project_review.md).
+Open [ProductPulse_Updated.pbix](ProductPulse_Updated.pbix) in Power BI Desktop. The report has four pages and uses the seven summary CSVs in `data/`.
 
-This wasn't built on this machine (Power BI Desktop doesn't run natively on
-macOS) — this guide plus the files in `powerbi/data/` are everything needed
-to build it on Windows/a VM/Power BI Service. Re-run the queries in
-`sql/exports/` (plus `sql/analysis/08_cohort_analysis.sql`) any time the
-underlying data changes to refresh these CSVs.
+The current file includes the ProductPulse theme, an activity date slicer, cohort heatmap colours, explanatory text, and corrected total/display settings. The report definitions were edited offline and checked for archive integrity, schema structure, layout bounds, and date-filter behaviour against the CSVs. The embedded data model was preserved.
 
-## 1. Why flat CSVs, not a live Postgres connection
+**Still to check:** reopen the revised file in Desktop, test the slicer, inspect all four pages, and capture the final screenshots. Offline validation does not confirm that Desktop renders an edited package correctly.
 
-Power BI Desktop can connect to Postgres directly, but that only works if
-Power BI can reach this machine's database over the network — true for a lot
-of setups, but not guaranteed for a VM or a separate Windows machine. CSVs
-work everywhere, and just as importantly: **the dashboard should read from
-small, pre-aggregated summary tables, not the raw 3M-row `events` table.**
-That's standard BI practice regardless of connectivity — recomputing DAU from
-3M rows on every visual refresh is exactly the kind of thing a semantic layer
-exists to avoid. If you do have network access from wherever you're running
-Power BI, swap any of these for a live Postgres connection to the same query
-— nothing else changes.
+## Pages and data
 
-## 2. Import the data
+| Page | CSVs |
+|---|---|
+| Executive Overview | `monthly_kpis.csv` |
+| User Behaviour | `daily_activity.csv`, `feature_adoption.csv`, `users_by_country.csv` |
+| Retention | `cohort_retention.csv`, `churn_by_channel.csv` |
+| Conversion Funnel | `conversion_funnel.csv` |
 
-`Get Data → Text/CSV`, once per file in `powerbi/data/`:
+These tables are independent summaries. A date slicer on `daily_activity` filters the two daily charts. Feature adoption and country summaries have no date field and remain all-time views. The exports do not contain `plan`, so a plan slicer would require additional data and model changes.
 
-| File | Grain | Feeds page |
-|---|---|---|
-| `monthly_kpis.csv` | 1 row/month | Executive Overview |
-| `daily_activity.csv` | 1 row/day | User Behaviour |
-| `feature_adoption.csv` | 1 row/feature | User Behaviour |
-| `users_by_country.csv` | 1 row/country | User Behaviour |
-| `cohort_retention.csv` | 1 row/cohort×period | Retention |
-| `churn_by_channel.csv` | 1 row/channel | Retention |
-| `conversion_funnel.csv` | 1 row/stage | Conversion Funnel |
+## Reporting dates
 
-No relationships needed between them — these are independent, pre-aggregated
-marts for different visuals, not a shared fact table. Keeping it flat is
-deliberate for a project this size; don't build a star schema these seven
-tables don't need.
+The snapshot is **31 August 2026**. All five Executive Overview cards are filtered to August. The monthly CSV also has a September row with 7 MAU and no billing KPIs; it is excluded from the report's monthly trends.
 
-## 3. Theme
+The User Behaviour slicer starts at **1 September 2025?31 August 2026**. Its page filter prevents dates after the snapshot from appearing. The Retention page filters cohort periods to the same observation boundary.
 
-`View → Themes → Browse for themes...` → select `powerbi/theme.json`. Blue/white
-executive palette, the same accent colors as the Python notebooks' plots
-(`#4C72B0` blue, `#55A868` green, `#C44E52` red) so the whole project reads as
-one consistent system, not two disconnected halves.
+These filters exclude six daily rows and one cohort-period row beyond the snapshot. They do not repair the generator. The late-August activity spike and drop remain visible and should be treated as simulation artefacts until investigated.
 
-## 4. Page 1 — Executive Overview
+## Refresh the CSVs
 
-**DAX measures** (add to `monthly_kpis`):
-```dax
-Current MRR = CALCULATE(SUM(monthly_kpis[mrr]), monthly_kpis[month] = MAX(monthly_kpis[month]))
-Current MAU = CALCULATE(SUM(monthly_kpis[mau]), monthly_kpis[month] = MAX(monthly_kpis[month]))
-Current Paying Users = CALCULATE(SUM(monthly_kpis[paying_users]), monthly_kpis[month] = MAX(monthly_kpis[month]))
-Current Churn Rate % = CALCULATE(AVERAGE(monthly_kpis[churn_rate_pct]), monthly_kpis[month] = MAX(monthly_kpis[month]))
+Run the notebooks against PostgreSQL first. From the project root, export the dashboard summaries:
 
-MRR MoM Growth % =
-VAR CurrentMRR = [Current MRR]
-VAR PriorMRR = CALCULATE(SUM(monthly_kpis[mrr]), monthly_kpis[month] = EDATE(MAX(monthly_kpis[month]), -1))
-RETURN DIVIDE(CurrentMRR - PriorMRR, PriorMRR)
+```powershell
+Get-ChildItem .\sql\exports\*.sql | ForEach-Object {
+    $csvName = ($_.BaseName -replace '^\d+_', '') + '.csv'
+    psql -X -h localhost -U postgres -d productpulse --csv -P footer=off -v ON_ERROR_STOP=1 -f $_.FullName -o ".\powerbi\data\$csvName"
+    if ($LASTEXITCODE -ne 0) { throw "Export failed: $($_.Name)" }
+}
+
+psql -X -h localhost -U postgres -d productpulse --csv -P footer=off -v ON_ERROR_STOP=1 -f .\sql\analysis\08_cohort_analysis.sql -o .\powerbi\data\cohort_retention.csv
 ```
 
-**Layout:**
-- Top row: 4 KPI cards — `Current MRR`, `Current MAU`, `Current Paying Users`, `Current Churn Rate %`. Add `MRR MoM Growth %` as the card's trend indicator if using the new-style Card visual.
-- Below: a line chart, Axis = `month`, Values = `mrr` — the headline revenue trend.
-- Two smaller line/area charts side by side: `mau` over `month`, and `paying_users` over `month`.
+In Desktop, update the CSV locations through **Transform data ? Data source settings ? Change source**, then select **Refresh**. If rebuilding the model, use **Get data ? Text/CSV** for each file.
 
-## 5. Page 2 — User Behaviour
+Keep month, date, and cohort-month columns as Date; use whole numbers for counts and period numbers. Percentage columns such as `retention_pct` and `churn_rate_pct` use a 0?100 scale.
 
-**Layout:**
-- Line chart: `daily_activity[date]` (Axis) vs. `dau` (Values) — full history is 6 years of daily data, so add a date-range slicer or default to the trailing 12 months so it's readable.
-- Second line/column chart on the same axis: `sessions`.
-- Bar chart: `feature_adoption`, Axis = `feature_name`, Values = `adoption_pct`, sorted descending — "Top Features".
-- Map visual (or a simple bar chart if a live map feels like overkill): `users_by_country[country]` as the location field, `total_revenue` or `users` as the value.
+## KPI cards
 
-## 6. Page 3 — Retention
+The supplied cards show:
 
-**Cohort Heatmap:** Matrix visual — Rows = `cohort_retention[cohort_month]`, Columns = `period_number`, Values = `retention_pct` (Average). Apply conditional formatting (color scale, e.g. white → `#2E5C8A`) to the values so it reads as a heatmap, not just a table of numbers.
+| Card | August value |
+|---|---:|
+| MRR | 319,394.60 |
+| MAU | 4,732 |
+| Paying users | 5,199 |
+| Monthly churn rate | 1.25% |
+| MRR growth | 1.21% |
 
-**Retention Curve:** Line chart, Axis = `period_number`, Values = `AVERAGE(cohort_retention[retention_pct])` — averages across every cohort into one curve. Add a measure if you want it named cleanly:
-```dax
-Avg Retention % = AVERAGE(cohort_retention[retention_pct])
+July MRR is 315,589.40, giving `(319394.60 / 315589.40 - 1) ? 100 = 1.21%` after rounding. Churn measures displayed with Percentage formatting must divide the raw 0?100 value by 100 exactly once.
+
+Keep card titles and filters on the same month. When changing the reporting month, check that MRR, MAU, paying users, and churn are all available for it.
+
+## Theme and chart formatting
+
+The custom theme is [theme.json](theme.json). To import it manually, use **Design ? Import theme**, or **View ? Themes ? Browse for themes** in earlier Desktop versions. Existing visual overrides may need resetting. See [Microsoft's theme instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-report-themes).
+
+The retention matrix uses:
+
+- Rows: `cohort_month`, formatted `MMM yyyy` and sorted chronologically.
+- Columns: `period_number`, from 0 to 12.
+- Values: Average of `retention_pct`.
+- Background gradient: 0 = `#FFFFFF`; 100 = `#8FAADC`, with dark text.
+- Blank cells unfilled; row and column totals disabled.
+
+Period 0 measures activity during the signup calendar month, so it need not equal 100%. The retention curve is an unweighted average across the available cohorts. See [Microsoft's matrix formatting instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-conditional-table-formatting).
+
+The funnel uses exact counts: **9,156 ? 7,419 ? 7,043 ? 5,174**. Its stage-table total is disabled because the stages contain overlapping users. The final stage reaches 56.51% of signups. There is no visitor stage because the source has no pre-signup traffic data.
+
+Keep the report notes visible. Customer attributes come from the source CSV, while usage and lifecycle histories are reconstructed or simulated. Channel differences reflect generator assumptions and do not establish causes.
+
+## Check and save
+
+1. Open the revised report and inspect each page for missing visuals, errors, clipped labels, and unreadable text.
+2. Confirm that both daily charts respond to the date slicer and that the all-time feature and country summaries stay unchanged. Restore the saved date range afterward.
+3. Check the five card values, heatmap colours, cohort labels, and exact funnel labels. Confirm that misleading totals are absent.
+4. Save the report from Desktop, close it, and reopen it once more.
+5. Capture the report canvases with tooltips dismissed and no selected visuals. Save the images under `screenshots/` as `executive_overview.png`, `user_behaviour.png`, `retention.png`, and `conversion_funnel.png`.
+6. Add the real screenshots to the README after reviewing them. Screenshots are not included yet.
+
+Local `.pbix.bak` backups are excluded from Git. If the revised file cannot open, use a local backup and retain the error details.
+
+## Report-formatting script
+
+`scripts/finish_powerbi_report.py` updates the saved PBIR definitions inside the report package. It preserves the embedded model and the archive components outside `Report/`. It does not execute DAX, refresh data, or render visuals.
+
+To stage a separate copy:
+
+```powershell
+python scripts/finish_powerbi_report.py --output powerbi/ProductPulse_Review.pbix
 ```
 
-**Churn by Acquisition Channel:** Bar chart, Axis = `churn_by_channel[acquisition_channel]`, Values = `churn_rate_pct`, sorted descending. Worth a callout on this page: Paid Social and Paid Search show the highest churn rates here — consistent with `05_conversion_funnel.sql`'s finding that they also convert worst, i.e. the same channels underperform at both ends of the customer lifecycle.
+Without `--output`, it updates the current report and creates a local backup on the first run. Close the report in Desktop before replacing its file. Reopening in Desktop is required after every package edit.
 
-## 7. Page 4 — Conversion Funnel
-
-**Funnel visual** (Power BI's native Funnel chart): Category = `stage` (make sure it's sorted by `stage_order`, not alphabetically — right-click the `stage` column → "Sort by column" → `stage_order`), Values = `users`.
-
-Note on the brief's stage naming: this funnel is *Signed Up → Activated → Paid
-→ Retained*, not *Visitor → Signup → Trial → Paid* — there's no pre-signup
-traffic data in this schema (see `docs/data_dictionary.md`, "Known
-deviation"), and "Trial Started" was dropped too since it's structurally
-identical to "Signed Up" in this data model (the trial always begins
-immediately at signup). Worth a text box on the page explaining that
-adaptation rather than leaving a viewer to wonder why it doesn't match a
-generic SaaS funnel template.
-
-## 8. Final polish
-
-- Consistent page titles top-left, consistent KPI card style across all four pages.
-- A page-level filter/slicer for `plan` where relevant (Executive Overview,
-  User Behaviour) lets a viewer immediately compare Basic/Pro/Enterprise
-  without rebuilding visuals.
-- Export each finished page as an image for the README's screenshots once built.
+The report declares visual schema 2.14.0. Structural checks during the update used the latest available public 2.13.0 schema; the file's original schema declarations were retained. This is a compatibility limit of the offline check.
