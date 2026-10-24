@@ -2,7 +2,7 @@
 
 ProductPulse connects customer accounts, product activity, subscriptions, and payments in a PostgreSQL analytics project. It includes ten SQL analyses, three Python notebooks, a demonstration churn model, and a four-page Power BI report.
 
-[Open the Power BI report](powerbi/ProductPulse_Updated.pbix) ? [Report guide](powerbi/BUILD_GUIDE.md) ? [Data dictionary](docs/data_dictionary.md)
+[Open the Power BI report](powerbi/ProductPulse_Updated.pbix) | [Report guide](powerbi/BUILD_GUIDE.md) | [Finishing checklist](docs/FINISHING_CHECKLIST.md) | [Data dictionary](docs/data_dictionary.md)
 
 ## What it answers
 
@@ -29,7 +29,7 @@ Open [ProductPulse_Updated.pbix](powerbi/ProductPulse_Updated.pbix) in Power BI 
 | Executive Overview | August KPI cards and monthly revenue, activity, and paying-user trends |
 | User Behaviour | Daily users and sessions, a date-range slicer, feature adoption, and country summaries |
 | Retention | Cohort heatmap, average activity retention, and churn by acquisition channel |
-| Conversion Funnel | Signed Up ? Activated ? Paid ? Retained, with exact stage counts |
+| Conversion Funnel | Signed Up -> Activated -> Paid -> Retained, with exact stage counts |
 
 The August exports contain these values:
 
@@ -43,22 +43,29 @@ The August exports contain these values:
 
 The report includes the ProductPulse theme, an activity date slicer, heatmap colours, and notes on the simulated data. Its report definitions and archive pass offline checks. Reopening and checking the revised file in Power BI Desktop, and capturing the final screenshots, are still pending. See the [report guide](powerbi/BUILD_GUIDE.md).
 
+### Screenshots
+
+Final screenshots will be added after checking the revised report in Desktop.
+Use the [capture instructions](powerbi/screenshots/README.md) to provide four
+PNG images or a PDF export of all four pages.
+
 ## Stack and structure
 
 PostgreSQL stores the four core tables. SQL produces the analyses and dashboard summaries. Python uses pandas, NumPy, scikit-learn, matplotlib, and seaborn for generation, exploration, and modelling.
 
 ```text
 ProductPulse/
-??? data/raw/       Source customer CSV
-??? data/processed/ Generated tables; kept out of Git
-??? sql/ddl/        Table definitions and indexes
-??? sql/analysis/   Ten business analyses
-??? sql/features/   User and churn-model features
-??? sql/exports/    Dashboard summary queries
-??? notebooks/     Generation, exploration, and churn model
-??? powerbi/        Report, theme, exports, and build guide
-??? scripts/        Validation and report-formatting tools
-??? docs/           Data dictionary and project notes
+|-- data/raw/       Source customer CSV
+|-- data/processed/ Generated tables; kept out of Git
+|-- sql/ddl/        Table definitions and indexes
+|-- sql/analysis/   Ten business analyses
+|-- sql/features/   User and churn-model features
+|-- sql/exports/    Dashboard summary queries
+|-- sql/validation/ Snapshot boundary checks
+|-- notebooks/     Generation, exploration, and churn model
+|-- powerbi/        Report, theme, exports, and build guide
+|-- scripts/        Validation and report-formatting tools
+`-- docs/           Data dictionary and project notes
 ```
 
 ```mermaid
@@ -191,3 +198,5 @@ A few limits matter when reading the results:
 - Database loads commit in separate steps. A failed load can leave partial tables; an atomic refresh is still needed.
 
 Further details are in [project notes](docs/project_review.md).
+
+For the remaining work in order, follow the [finishing checklist](docs/FINISHING_CHECKLIST.md).

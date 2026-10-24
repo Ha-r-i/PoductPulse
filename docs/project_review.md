@@ -23,6 +23,9 @@ Exact-day activity retention does not measure permanent churn. Plan-dependent si
 
 ## Remaining work
 
+Follow the [finishing checklist](FINISHING_CHECKLIST.md) for commands, checks,
+and the order of the remaining steps.
+
 - Open and inspect the revised report in Power BI Desktop, test its interactions, and capture the four final screenshots.
 - Complete a fresh installation and end-to-end run. Saved notebook outputs and CSVs alone do not verify that process.
 - Correct the generator's temporal boundaries and reconcile regenerated outputs.

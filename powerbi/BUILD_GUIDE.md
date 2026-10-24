@@ -21,7 +21,7 @@ These tables are independent summaries. A date slicer on `daily_activity` filter
 
 The snapshot is **31 August 2026**. All five Executive Overview cards are filtered to August. The monthly CSV also has a September row with 7 MAU and no billing KPIs; it is excluded from the report's monthly trends.
 
-The User Behaviour slicer starts at **1 September 2025?31 August 2026**. Its page filter prevents dates after the snapshot from appearing. The Retention page filters cohort periods to the same observation boundary.
+The User Behaviour slicer's saved range is **1 September 2025 to 31 August 2026**. Its page filter prevents dates after the snapshot from appearing. The Retention page filters cohort periods to the same observation boundary.
 
 These filters exclude six daily rows and one cohort-period row beyond the snapshot. They do not repair the generator. The late-August activity spike and drop remain visible and should be treated as simulation artefacts until investigated.
 
@@ -39,9 +39,9 @@ Get-ChildItem .\sql\exports\*.sql | ForEach-Object {
 psql -X -h localhost -U postgres -d productpulse --csv -P footer=off -v ON_ERROR_STOP=1 -f .\sql\analysis\08_cohort_analysis.sql -o .\powerbi\data\cohort_retention.csv
 ```
 
-In Desktop, update the CSV locations through **Transform data ? Data source settings ? Change source**, then select **Refresh**. If rebuilding the model, use **Get data ? Text/CSV** for each file.
+In Desktop, update the CSV locations through **Transform data > Data source settings > Change source**, then select **Refresh**. If rebuilding the model, use **Get data > Text/CSV** for each file.
 
-Keep month, date, and cohort-month columns as Date; use whole numbers for counts and period numbers. Percentage columns such as `retention_pct` and `churn_rate_pct` use a 0?100 scale.
+Keep month, date, and cohort-month columns as Date; use whole numbers for counts and period numbers. Percentage columns such as `retention_pct` and `churn_rate_pct` use a 0-100 scale.
 
 ## KPI cards
 
@@ -55,13 +55,13 @@ The supplied cards show:
 | Monthly churn rate | 1.25% |
 | MRR growth | 1.21% |
 
-July MRR is 315,589.40, giving `(319394.60 / 315589.40 - 1) ? 100 = 1.21%` after rounding. Churn measures displayed with Percentage formatting must divide the raw 0?100 value by 100 exactly once.
+July MRR is 315,589.40, giving `(319394.60 / 315589.40 - 1) * 100 = 1.21%` after rounding. Churn measures displayed with Percentage formatting must divide the raw 0-100 value by 100 exactly once.
 
 Keep card titles and filters on the same month. When changing the reporting month, check that MRR, MAU, paying users, and churn are all available for it.
 
 ## Theme and chart formatting
 
-The custom theme is [theme.json](theme.json). To import it manually, use **Design ? Import theme**, or **View ? Themes ? Browse for themes** in earlier Desktop versions. Existing visual overrides may need resetting. See [Microsoft's theme instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-report-themes).
+The custom theme is [theme.json](theme.json). To import it manually, use **Design > Import theme**, or **View > Themes > Browse for themes** in earlier Desktop versions. Existing visual overrides may need resetting. See [Microsoft's theme instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-report-themes).
 
 The retention matrix uses:
 
@@ -73,7 +73,7 @@ The retention matrix uses:
 
 Period 0 measures activity during the signup calendar month, so it need not equal 100%. The retention curve is an unweighted average across the available cohorts. See [Microsoft's matrix formatting instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-conditional-table-formatting).
 
-The funnel uses exact counts: **9,156 ? 7,419 ? 7,043 ? 5,174**. Its stage-table total is disabled because the stages contain overlapping users. The final stage reaches 56.51% of signups. There is no visitor stage because the source has no pre-signup traffic data.
+The funnel uses exact counts: **9,156 -> 7,419 -> 7,043 -> 5,174**. Its stage-table total is disabled because the stages contain overlapping users. The final stage reaches 56.51% of signups. There is no visitor stage because the source has no pre-signup traffic data.
 
 Keep the report notes visible. Customer attributes come from the source CSV, while usage and lifecycle histories are reconstructed or simulated. Channel differences reflect generator assumptions and do not establish causes.
 
@@ -83,8 +83,8 @@ Keep the report notes visible. Customer attributes come from the source CSV, whi
 2. Confirm that both daily charts respond to the date slicer and that the all-time feature and country summaries stay unchanged. Restore the saved date range afterward.
 3. Check the five card values, heatmap colours, cohort labels, and exact funnel labels. Confirm that misleading totals are absent.
 4. Save the report from Desktop, close it, and reopen it once more.
-5. Capture the report canvases with tooltips dismissed and no selected visuals. Save the images under `screenshots/` as `executive_overview.png`, `user_behaviour.png`, `retention.png`, and `conversion_funnel.png`.
-6. Add the real screenshots to the README after reviewing them. Screenshots are not included yet.
+5. Capture the report canvases with tooltips dismissed and no selected visuals. Save the images under `powerbi/screenshots/` as `executive_overview.png`, `user_behaviour.png`, `retention.png`, and `conversion_funnel.png`. Alternatively, export all four pages through **File > Export > Export to PDF** and provide the PDF. See the [capture instructions](screenshots/README.md).
+6. Add the real screenshots to the README after reviewing them. Screenshots are not included yet. The remaining project work is listed in the [finishing checklist](../docs/FINISHING_CHECKLIST.md).
 
 Local `.pbix.bak` backups are excluded from Git. If the revised file cannot open, use a local backup and retain the error details.
 
