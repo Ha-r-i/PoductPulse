@@ -1,9 +1,6 @@
-# Finish ProductPulse
+# Validation and release checklist
 
-The SQL, notebooks, exports, and four-page report are present. Follow these
-steps to finish and verify the portfolio project. Screenshots can be added
-now to document the current report; capture them again if regenerated data
-changes the visuals.
+The SQL, notebooks, exports, four-page report, PDF, and screenshot gallery are included. This checklist covers the remaining data corrections and end-to-end verification. Refresh the PDF and images whenever the underlying data changes.
 
 ## 1. Correct the generated observation window
 
@@ -100,12 +97,9 @@ source paths, select Refresh, and inspect every page.
 - Check the theme, notes, spacing, and readable labels. Save, close, and
   reopen the report to confirm it still works.
 
-## 7. Add the screenshots
+## 7. Keep the report previews in sync
 
-Use the [capture instructions](../powerbi/screenshots/README.md). Provide
-four PNGs or one PDF export of all four pages. The images can then be
-reviewed, placed in `powerbi/screenshots/`, and embedded in the root README.
-Use captures of the revised report rather than the earlier layout.
+The [PDF and four screenshots](../powerbi/screenshots/README.md) are already included. After regenerating data or changing the report, replace them together. Review the card values, selected date range, labels, and data notes before publishing.
 
 ## 8. Publish the final version
 
@@ -125,7 +119,7 @@ images and report download on GitHub.
 - [ ] Live snapshot checks and the ten SQL analyses have been reviewed.
 - [ ] All seven exports and the report use the same regenerated dataset.
 - [ ] The revised report opens, refreshes, and responds correctly in Desktop.
-- [ ] Four clear screenshots are visible in the GitHub README.
+- [x] Four reviewed screenshots and a PDF preview are included in the README.
 - [ ] Documentation matches the final data and the repository is pushed.
 
 The churn model can be complete as a documented simulation exercise. A claim

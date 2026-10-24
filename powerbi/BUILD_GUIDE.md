@@ -1,10 +1,8 @@
-# Power BI report guide
+# Power BI dashboard guide
 
-Open [ProductPulse_Updated.pbix](ProductPulse_Updated.pbix) in Power BI Desktop. The report has four pages and uses the seven summary CSVs in `data/`.
+Open [ProductPulse_Updated.pbix](ProductPulse_Updated.pbix) in Power BI Desktop. The report has four pages and uses the seven summary CSVs in `data/`. The [PDF](ProductPulse-Dashboard.pdf) and [screenshots](screenshots/README.md) provide a static preview.
 
-The current file includes the ProductPulse theme, an activity date slicer, cohort heatmap colours, explanatory text, and corrected total/display settings. The report definitions were edited offline and checked for archive integrity, schema structure, layout bounds, and date-filter behaviour against the CSVs. The embedded data model was preserved.
-
-**Still to check:** reopen the revised file in Desktop, test the slicer, inspect all four pages, and capture the final screenshots. Offline validation does not confirm that Desktop renders an edited package correctly.
+The report includes KPI cards, an activity date slicer, a cohort heatmap, and notes on the data assumptions. The supplied PDF has been reviewed and its four pages are included in the README. The package also passes structural checks. Data refresh and interactive filtering require verification in Desktop.
 
 ## Pages and data
 
@@ -21,7 +19,7 @@ These tables are independent summaries. A date slicer on `daily_activity` filter
 
 The snapshot is **31 August 2026**. All five Executive Overview cards are filtered to August. The monthly CSV also has a September row with 7 MAU and no billing KPIs; it is excluded from the report's monthly trends.
 
-The User Behaviour slicer's saved range is **1 September 2025 to 31 August 2026**. Its page filter prevents dates after the snapshot from appearing. The Retention page filters cohort periods to the same observation boundary.
+The packaged report's default User Behaviour range is **1 September 2025 to 31 August 2026**. The screenshot captures a different user-selected range. The page filter prevents dates after the snapshot from appearing. The Retention page filters cohort periods to the same observation boundary.
 
 These filters exclude six daily rows and one cohort-period row beyond the snapshot. They do not repair the generator. The late-August activity spike and drop remain visible and should be treated as simulation artefacts until investigated.
 
@@ -61,7 +59,7 @@ Keep card titles and filters on the same month. When changing the reporting mont
 
 ## Theme and chart formatting
 
-The custom theme is [theme.json](theme.json). To import it manually, use **Design > Import theme**, or **View > Themes > Browse for themes** in earlier Desktop versions. Existing visual overrides may need resetting. See [Microsoft's theme instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-report-themes).
+The [theme.json](theme.json) file provides a light base theme. The PDF gallery uses a dark presentation. To import a theme manually, use **Design > Import theme**, or **View > Themes > Browse for themes** in earlier Desktop versions. Existing visual overrides may need resetting. See [Microsoft's theme instructions](https://learn.microsoft.com/en-us/power-bi/create-reports/desktop-report-themes).
 
 The retention matrix uses:
 
@@ -79,14 +77,14 @@ Keep the report notes visible. Customer attributes come from the source CSV, whi
 
 ## Check and save
 
-1. Open the revised report and inspect each page for missing visuals, errors, clipped labels, and unreadable text.
+1. Open the report and inspect each page for missing visuals, errors, clipped labels, and unreadable text.
 2. Confirm that both daily charts respond to the date slicer and that the all-time feature and country summaries stay unchanged. Restore the saved date range afterward.
 3. Check the five card values, heatmap colours, cohort labels, and exact funnel labels. Confirm that misleading totals are absent.
 4. Save the report from Desktop, close it, and reopen it once more.
-5. Capture the report canvases with tooltips dismissed and no selected visuals. Save the images under `powerbi/screenshots/` as `executive_overview.png`, `user_behaviour.png`, `retention.png`, and `conversion_funnel.png`. Alternatively, export all four pages through **File > Export > Export to PDF** and provide the PDF. See the [capture instructions](screenshots/README.md).
-6. Add the real screenshots to the README after reviewing them. Screenshots are not included yet. The remaining project work is listed in the [finishing checklist](../docs/FINISHING_CHECKLIST.md).
+5. If the report or data changed, update the [PDF and all four screenshots](screenshots/README.md) together. Keep the notes visible and use the existing filenames.
+6. Review the [validation and release checklist](../docs/FINISHING_CHECKLIST.md) before publishing regenerated data.
 
-Local `.pbix.bak` backups are excluded from Git. If the revised file cannot open, use a local backup and retain the error details.
+Local `.pbix.bak` backups are excluded from Git. Retain a working backup before editing the report package.
 
 ## Report-formatting script
 

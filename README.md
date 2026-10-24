@@ -1,37 +1,16 @@
 # ProductPulse
 
-ProductPulse connects customer accounts, product activity, subscriptions, and payments in a PostgreSQL analytics project. It includes ten SQL analyses, three Python notebooks, a demonstration churn model, and a four-page Power BI report.
+SaaS product analytics with PostgreSQL, Python, and Power BI.
 
-[Open the Power BI report](powerbi/ProductPulse_Updated.pbix) | [Report guide](powerbi/BUILD_GUIDE.md) | [Finishing checklist](docs/FINISHING_CHECKLIST.md) | [Data dictionary](docs/data_dictionary.md)
+ProductPulse tracks revenue, engagement, retention, and conversion across customer accounts, product events, subscriptions, and payments. The project includes ten SQL analyses, three notebooks, a demonstration churn model, and a four-page dashboard.
 
-## What it answers
+[Power BI report](powerbi/ProductPulse_Updated.pbix) | [Dashboard PDF](powerbi/ProductPulse-Dashboard.pdf) | [Report guide](powerbi/BUILD_GUIDE.md) | [Data dictionary](docs/data_dictionary.md)
 
-- How many customers use the product each day and month?
-- How do recurring revenue and the number of paying customers change over time?
-- Where do users drop out of the signup-to-paid funnel?
-- How does activity retention vary across signup cohorts?
-- Which features are used, and how do customer segments differ?
-
-## Data
-
-The source is the [IBM Telco Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn): 7,043 customers with tenure, charges, contract details, and churn labels. The CSV is included in `data/raw/`.
-
-Product events, trial signups, acquisition channels, and geography are simulated. Payment histories and churn dates are reconstructed from the customer snapshot. The generated dataset has 9,156 accounts and more than three million events. The [data dictionary](docs/data_dictionary.md) explains the mapping and assumptions.
-
-The reporting snapshot is **31 August 2026**.
+![Executive Overview: August KPI cards and monthly revenue, activity, and paying-user trends](powerbi/screenshots/executive_overview.png)
 
 ## Dashboard
 
-Open [ProductPulse_Updated.pbix](powerbi/ProductPulse_Updated.pbix) in Power BI Desktop.
-
-| Page | Contents |
-|---|---|
-| Executive Overview | August KPI cards and monthly revenue, activity, and paying-user trends |
-| User Behaviour | Daily users and sessions, a date-range slicer, feature adoption, and country summaries |
-| Retention | Cohort heatmap, average activity retention, and churn by acquisition channel |
-| Conversion Funnel | Signed Up -> Activated -> Paid -> Retained, with exact stage counts |
-
-The August exports contain these values:
+The Executive Overview brings the five headline metrics together with their monthly trends. The reporting snapshot is **31 August 2026**.
 
 | Metric | Value |
 |---|---:|
@@ -41,13 +20,31 @@ The August exports contain these values:
 | Monthly churn rate | 1.25% |
 | Revenue growth from July | 1.21% |
 
-The report includes the ProductPulse theme, an activity date slicer, heatmap colours, and notes on the simulated data. Its report definitions and archive pass offline checks. Reopening and checking the revised file in Power BI Desktop, and capturing the final screenshots, are still pending. See the [report guide](powerbi/BUILD_GUIDE.md).
+### User Behaviour
 
-### Screenshots
+Daily active users and sessions respond to the date slicer. Feature adoption and country summaries cover the full exported history.
 
-Final screenshots will be added after checking the revised report in Desktop.
-Use the [capture instructions](powerbi/screenshots/README.md) to provide four
-PNG images or a PDF export of all four pages.
+![User Behaviour: activity date slicer, daily active users, sessions, feature adoption, and users by country](powerbi/screenshots/user_behaviour.png)
+
+### Retention
+
+The cohort matrix shows monthly activity retention, alongside an unweighted retention curve and churn by acquisition channel. Period 0 measures activity during the signup month.
+
+![Retention: cohort heatmap, average activity retention, and churn by acquisition channel](powerbi/screenshots/retention.png)
+
+### Conversion Funnel
+
+The funnel follows **9,156 signups, 7,419 activated users, 7,043 paid users, and 5,174 retained users**. The final stage represents 56.51% of signups. Stages overlap, so their counts are not additive.
+
+![Conversion Funnel: Signed Up, Activated, Paid, and Retained stages with a stage-count table](powerbi/screenshots/conversion_funnel.png)
+
+These are static report views. Open the PBIX in Power BI Desktop to use the filters; the [report guide](powerbi/BUILD_GUIDE.md) covers data sources and refresh.
+
+## Data
+
+The source is the [IBM Telco Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn): 7,043 customers with tenure, charges, contract details, and churn labels. The source CSV is included in `data/raw/`.
+
+Product events, trial-only accounts, acquisition channels, and geography are simulated. Payment histories and lifecycle dates are reconstructed from the customer snapshot. The resulting dataset has 9,156 accounts and more than three million events. The [data dictionary](docs/data_dictionary.md) documents each field and its assumptions.
 
 ## Stack and structure
 
@@ -179,7 +176,7 @@ For macOS or Linux, create a virtual environment with `python3 -m venv .venv` an
 | Feature adoption | [09_feature_adoption.sql](sql/analysis/09_feature_adoption.sql) |
 | Churn rate | [10_churn_rate.sql](sql/analysis/10_churn_rate.sql) |
 
-## Validation and limits
+## Validation
 
 Run the offline checks from the project root:
 
@@ -189,14 +186,10 @@ python scripts/validate_project.py
 
 These check the notebooks, source IDs, saved exports, theme, and report package. They do not execute the notebooks, query PostgreSQL, or render Power BI visuals.
 
-A few limits matter when reading the results:
+For live database checks, notebook execution, and report refresh, follow the [validation and release checklist](docs/FINISHING_CHECKLIST.md).
 
-- Channels and usage histories are generated using churn outcomes. Differences between channels and model scores reflect these assumptions; they are not evidence for marketing spend or production predictions.
-- Cohort retention measures activity in a calendar month. Day-7 and day-30 activity do not establish when a customer permanently churned.
-- The generator can create activity after the snapshot. Report filters exclude those dates, but the underlying histories still need correction and regeneration. The late-August activity spike also needs investigation.
-- Subscription state is a snapshot rather than a full history. Model eligibility can depend on information observed after the prediction cutoff.
-- Database loads commit in separate steps. A failed load can leave partial tables; an atomic refresh is still needed.
+## Interpretation and known issues
 
-Further details are in [project notes](docs/project_review.md).
+Usage and acquisition channels are generated using churn outcomes. Model scores and channel differences describe this simulation; they do not establish production predictive performance or causal effects. Activity retention measures product use, rather than permanent subscription retention.
 
-For the remaining work in order, follow the [finishing checklist](docs/FINISHING_CHECKLIST.md).
+The generator still needs stricter date bounds, and the database load needs a single transaction. Report filters exclude post-snapshot dates but do not correct the underlying histories. See the [project notes](docs/project_review.md) for details and the [validation and release checklist](docs/FINISHING_CHECKLIST.md) for the remaining work.

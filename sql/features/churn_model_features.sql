@@ -1,26 +1,13 @@
--- ============================================================
--- Churn Model Feature & Label Table (leakage-free)
--- ============================================================
--- A naive approach would compute "days since last event" as of the current
--- snapshot and use it to predict the *current* status column. That's close
--- to circular: a churned user is, by definition, silent after they leave, so
--- "recency is high" and "status = churned" are nearly the same fact measured
--- twice. It would also be useless in production — you can't act on a
--- prediction of something that already happened.
---
--- Instead: pick a CUTOFF 90 days before the last observed data, restrict to
--- users who were still paying customers AT that cutoff (the population you'd
--- actually be scoring in production), compute every feature using ONLY data
--- up to the cutoff, and label each user by whether they churned in the 90
--- days AFTER it. This is a genuine forward-looking prediction task.
+-- Churn-model features and a 90-day target.
+-- Features use activity observed by the cutoff. Eligibility also uses snapshot
+-- status or later payments, so population selection is not prospective.
+-- Usage is simulated using known churn outcomes. See docs/project_review.md.
 
 WITH cutoff AS (
     SELECT (SELECT MAX(event_timestamp) FROM events) - INTERVAL '90 days' AS cutoff_date
 ),
 eligible AS (
-    -- Paying before the cutoff, and not yet churned as of the cutoff (i.e.
-    -- genuinely "at risk" at prediction time) -- confirmed by either still
-    -- being active today, or having a payment that came after the cutoff.
+    -- Eligibility uses current status or post-cutoff payments.
     SELECT s.user_id, s.plan, s.status, s.paid_date, u.acquisition_channel, u.country, u.signup_date
     FROM subscriptions s
     JOIN users u USING (user_id)

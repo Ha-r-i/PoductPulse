@@ -49,7 +49,7 @@ COMMENT ON TABLE events IS
 COMMENT ON COLUMN events.feature_name IS
     'Populated only when event_name = ''feature_used''; NULL for session/login-level events.';
 
--- Supports the DAU/MAU, funnel, and retention queries we'll write in Module 4-5
+-- Supports DAU/MAU, funnel, and retention queries.
 CREATE INDEX idx_events_user_id    ON events(user_id);
 CREATE INDEX idx_events_timestamp  ON events(event_timestamp);
 CREATE INDEX idx_events_session_id ON events(session_id);

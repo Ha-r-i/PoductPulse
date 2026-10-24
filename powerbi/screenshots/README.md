@@ -1,27 +1,18 @@
-# Report screenshots
+# Dashboard screenshots
 
-Capture the revised `ProductPulse_Updated.pbix`, with one image per page:
+These four images are rendered from the [dashboard PDF](../ProductPulse-Dashboard.pdf) and displayed in the [project README](../../README.md). Each image is 2160 by 1640 pixels and preserves the full PDF page, including its notes.
 
-| Report page | Filename |
+| Page | Image |
 |---|---|
-| Executive Overview | `executive_overview.png` |
-| User Behaviour | `user_behaviour.png` |
-| Retention | `retention.png` |
-| Conversion Funnel | `conversion_funnel.png` |
+| Executive Overview | [executive_overview.png](executive_overview.png) |
+| User Behaviour | [user_behaviour.png](user_behaviour.png) |
+| Retention | [retention.png](retention.png) |
+| Conversion Funnel | [conversion_funnel.png](conversion_funnel.png) |
 
-Before capturing, select Fit to page, restore the saved date range, dismiss
-tooltips, and click an empty part of the canvas so no visual is selected.
-Capture the full report canvas without the ribbon, taskbar, or editing panes.
-Keep all titles, chart labels, and notes readable.
+The User Behaviour image shows the date range selected when the screenshot was captured. Feature adoption and country summaries remain all-time views. A static image does not verify refresh or filter interactions in Desktop.
 
-You can instead export all four pages from Power BI Desktop using
-**File > Export > Export to PDF** and attach the PDF. It can be rendered into
-the four PNGs for the README. See
-[Microsoft's PDF export instructions](https://learn.microsoft.com/en-us/power-bi/collaborate-share/end-user-pdf).
+## Updating the images
 
-The earlier screenshots in the conversation show the report before the final
-formatting update. New captures should show the date slicer, heatmap colours,
-theme, notes, and corrected totals.
+After changing the report or its data, review all four pages in Desktop. Select Fit to page, dismiss tooltips, and clear visual selections. Capture the full report canvas with its notes, excluding the ribbon, taskbar, and editing panes.
 
-After reviewing the images, add them to this folder and embed them in the
-root README's Screenshots section. No final captures are included yet.
+Keep the filenames above so the README links remain valid. If using a PDF, export all four pages through **File > Export > Export to PDF**, then render each page as a PNG. Replace the PDF and all four images together. See [Microsoft's PDF export instructions](https://learn.microsoft.com/en-us/power-bi/consumer/end-user-pdf).

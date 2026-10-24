@@ -1,105 +1,108 @@
-# ProductPulse — Data Dictionary & Source Mapping
+# Data dictionary
 
-**Current status:** The Power BI report is not yet included. Billing/churn dates are reconstructed or simulated, and outcome-conditioned synthetic behavior limits model and business interpretations. See [the review](project_review.md).
+## Source and scope
 
-## Approach
+The source CSV is the [IBM Telco Customer Churn dataset](https://www.kaggle.com/datasets/blastchar/telco-customer-churn), with 7,043 customer records. It contains tenure, monthly and total charges, contract attributes, and a churn label. It does not contain product events, signup timestamps, payment transactions, acquisition channels, or geography.
 
-ProductPulse blends **real subscription/billing/churn data** with a **calibrated
-synthetic event log**. No public dataset pairs row-level product usage with real
-subscription billing for the same users — that combination is commercially
-sensitive and isn't released publicly. Rather than fabricate every number, only
-the pieces that genuinely don't exist anywhere in public data are simulated —
-and they're simulated *from* the real data's actual tenure/charge/churn
-patterns, not from scratch.
+ProductPulse maps this customer snapshot into four analytics tables. Lifecycle dates and payments are reconstructed; product activity and additional trial-only accounts are simulated. The saved dataset contains 9,156 accounts. These histories describe a fictional SaaS product rather than observed Telco operations.
 
-**Real source:** IBM Telco Customer Churn dataset — 7,043 customers, 21 columns,
-originally published by IBM, mirrored on Kaggle:
-https://www.kaggle.com/datasets/blastchar/telco-customer-churn
-
-| Data | Source |
+| Table or attribute | Basis |
 |---|---|
-| `users` signup timing | Derived from real `tenure` |
-| `subscriptions` plan / status | Derived from real `MonthlyCharges` / `Churn` |
-| `payments` billing history | Reconstructed from real `MonthlyCharges` / `TotalCharges` |
-| `events` usage log | Fully synthetic, calibrated to each real user's tenure & churn outcome |
-| `country`, `acquisition_channel` | Fully synthetic (Telco has no geography/marketing fields) |
+| Customer IDs, tenure, charges, and churn labels | Source CSV |
+| Signup dates and subscription lifecycle dates | Derived from tenure and assumed timing |
+| Plan tiers | Monthly-charge terciles mapped to Basic, Pro, and Enterprise |
+| Payment records | Monthly charges repeated over reconstructed billing months |
+| Product events and session IDs | Simulated usage histories |
+| Country and acquisition channel | Sampled categories |
+| Trial-only accounts | Additional simulated non-converting users |
 
-## Reference constants (implemented in Module 3)
+## Generation parameters
 
-- `SNAPSHOT_DATE = 2026-08-31` — the fictional "as of" date the dataset is generated against.
-- `TRIAL_LENGTH_DAYS = 14`
-- `NON_CONVERTER_RATE = 0.30` — synthetic trial drop-offs added as 30% of the real
-  (already-paying) Telco base, giving an implied trial → paid conversion of **~77%**.
-  Telco only contains existing customers, so a realistic top-of-funnel has to be added
-  deliberately rather than assumed away. 77% is high for a self-serve trial but
-  plausible for a guided/sales-assisted B2B trial, which fits a product managers use
-  for decision-making — that's the framing used here rather than a pure self-serve
-  PLG benchmark (which would run closer to 15-25% and would have meant tripling the
-  synthetic population relative to the real one, diluting the "grounded in real data"
-  story for no analytical benefit).
+The parameters are defined in `notebooks/01_data_cleaning_and_generation.ipynb`.
+
+| Parameter | Value | Meaning |
+|---|---|---|
+| `SNAPSHOT_DATE` | `2026-08-31` | Reporting cutoff |
+| `RNG_SEED` | `42` | Random-number seed |
+| `TRIAL_LENGTH_DAYS` | `14` | Assumed interval between signup and paid conversion |
+| `NON_CONVERTER_RATE` | `0.30` | Additional trial-only accounts as a fraction of the 7,043 source customers |
+| `COMPANY_START` | Snapshot minus 72 months | Reference point for reconstructing historical signups |
+
+Adding 2,113 trial-only accounts produces 9,156 total accounts and a 76.92% signup-to-paid ratio. That ratio follows from the population construction; it is not an observed conversion benchmark.
 
 ## `users`
 
-| Column | Type | Source | Notes |
-|---|---|---|---|
-| user_id | VARCHAR(20) PK | Real (`customerID`) | e.g. `7590-VHVEG` |
-| signup_date | DATE | Derived | `SNAPSHOT_DATE − tenure months` (real `tenure`), ± a few random days |
-| country | VARCHAR | Synthetic | Weighted distribution across a realistic SaaS market mix (US-heavy; UK, India, Canada, Australia, Germany, etc.) |
-| acquisition_channel | VARCHAR | Synthetic | Organic Search, Paid Search, Paid Social, Referral, Partner, Email — weighted, with a mild realistic skew (referral/organic churn a little less than paid channels) |
+One row per account.
+
+| Column | Type | Source and definition |
+|---|---|---|
+| `user_id` | VARCHAR(20), primary key | Source `customerID`, or a generated unique ID for trial-only accounts |
+| `signup_date` | DATE | Reconstructed from tenure and an assumed end date, with random day-level jitter |
+| `country` | VARCHAR | Sampled from ten countries using fixed weights |
+| `acquisition_channel` | VARCHAR | Organic Search, Paid Search, Paid Social, Referral, Partner, or Email |
+
+Active customers' signup dates are derived backward from the snapshot. Churned customers are assigned earlier end dates before deriving their signups. Trial-only signup dates are sampled from the reconstructed signup distribution.
+
+Channel weights differ according to the churn outcome. Channel-level differences are therefore partly imposed by the generator.
 
 ## `events`
 
-| Column | Type | Source | Notes |
-|---|---|---|---|
-| event_id | BIGSERIAL PK | Generated | |
-| user_id | FK → users | — | |
-| event_name | VARCHAR | Synthetic | `login`, `feature_used` (no `logout` — real telemetry rarely logs those reliably either, so omitting it is more authentic than inventing one) |
-| feature_name | VARCHAR, nullable | Synthetic | Populated only when `event_name='feature_used'`; drawn from a 10-feature catalog with a power-law popularity skew |
-| event_timestamp | TIMESTAMP | Synthetic, **calibrated** | Per-user session frequency depends on real plan tier (from `MonthlyCharges`) and real churn outcome — churned users' sessions taper off over their final 3 weeks before their real churn date. Generated across each user's **entire** tenure, not a trailing calendar window, so every cohort — not just recent ones — keeps its early-lifecycle events for retention/cohort analysis. This is what makes retention, feature adoption, and the churn model meaningful instead of random noise. |
+One row per product event; multiple events can share a session.
 
-**Post-generation invariant:** `paid_date` for real users comes straight from
-Telco, independent of the simulated session draw — at low session rates,
-~2,000 real paying customers randomly landed zero sessions in their 14-day
-trial window. The notebook detects this and seeds one activation event
-(login + feature_used) for any paying user missing one, then asserts the
-invariant holds before loading. Without this, the conversion funnel would show
-more "Paid" users than "Activated" users, which is impossible — and no real
-company charges someone who never opened the product anyway.
-| session_id | VARCHAR(40) | Synthetic | Groups events into sessions |
+| Column | Type | Source and definition |
+|---|---|---|
+| `event_id` | BIGSERIAL, primary key | Generated event identifier |
+| `user_id` | VARCHAR(20), foreign key | Account in `users` |
+| `event_name` | VARCHAR | `login` or `feature_used` |
+| `feature_name` | VARCHAR, nullable | Feature used; null for login events |
+| `event_timestamp` | TIMESTAMP | Simulated event time within a reconstructed activity history |
+| `session_id` | VARCHAR(40) | Generated identifier grouping events into sessions |
+
+Session rates depend on plan and a sampled engagement level. Churned users have reduced activity near their assumed end dates. Features are sampled from a weighted catalog of ten product areas.
+
+The generator adds a trial-period activation session for any paid account that lacks one. The funnel's activated-before-paid ordering is consequently a generation rule, rather than an independently observed finding.
 
 ## `subscriptions`
 
-| Column | Type | Source | Notes |
-|---|---|---|---|
-| user_id | VARCHAR(20) PK, FK → users | — | One row per user (snapshot, not a change-history table — deliberate scope for a 1-2 week project) |
-| plan | VARCHAR, CHECK IN (Basic/Pro/Enterprise) | Derived | Tercile of real `MonthlyCharges` (low/mid/high) mapped to Basic/Pro/Enterprise |
-| status | VARCHAR, CHECK IN (trialing/active/churned) | Derived | Real `Churn` (Yes→churned, No→active); synthetic non-converters end as `churned` with `paid_date IS NULL` — this is how downstream SQL tells "churned after paying" apart from "dropped out during trial" without needing a 4th status value |
-| trial_start | DATE | Derived | = `signup_date` |
-| paid_date | DATE, nullable | Derived | = `trial_start + 14 days` for converters; `NULL` for non-converters |
+One row per account, representing its snapshot state rather than a complete status history.
+
+| Column | Type | Source and definition |
+|---|---|---|
+| `user_id` | VARCHAR(20), primary and foreign key | Account in `users` |
+| `plan` | VARCHAR | Basic, Pro, or Enterprise; source customers use monthly-charge terciles |
+| `status` | VARCHAR | `trialing`, `active`, or `churned` |
+| `trial_start` | DATE | Same as `signup_date` |
+| `paid_date` | DATE, nullable | Signup plus 14 days for source customers; null for trial-only accounts |
+
+Source `Churn` maps to `active` or `churned`. Trial-only accounts are recorded as `churned` with no paid date. SQL uses `paid_date IS NOT NULL` to distinguish paid customers from trial drop-offs.
+
+The current generator can assign recent customers a paid date beyond the snapshot. Recent-trial censoring remains an open correction; see the [project notes](project_review.md).
 
 ## `payments`
 
-| Column | Type | Source | Notes |
-|---|---|---|---|
-| payment_id | BIGSERIAL PK | Generated | |
-| user_id | FK → users | — | |
-| amount | NUMERIC(10,2) | Real (`MonthlyCharges`) | Same real charge repeated across the user's real billing history |
-| payment_date | DATE | Derived | One row per elapsed month from `paid_date` to churn/snapshot date, spaced monthly |
+One row per reconstructed billing month.
 
-**QA check (run in `notebooks/01_data_cleaning_and_generation.ipynb`):**
-`SUM(payments.amount)` per user reconciles against Telco's real `TotalCharges`
-column at **r = 0.9996**. The small remaining gap is expected — real Telco
-billing reflects mid-contract rate changes and promos this dataset can't see,
-so a flat `MonthlyCharges × months` reconstruction can't match it to the cent.
+| Column | Type | Source and definition |
+|---|---|---|
+| `payment_id` | BIGSERIAL, primary key | Generated payment identifier |
+| `user_id` | VARCHAR(20), foreign key | Account in `users` |
+| `amount` | NUMERIC(10,2) | Source `MonthlyCharges`, held constant across billing months |
+| `payment_date` | DATE | Monthly intervals from the derived paid date, bounded by tenure and the snapshot |
 
-## Known deviation to flag now
+Notebook 01 compares reconstructed customer totals with source `TotalCharges`. This is a consistency check; the source does not provide individual invoices, historical price changes, or promotions.
 
-The brief's Power BI funnel page is *Visitor → Signup → Trial → Paid*. Our
-schema has no pre-signup "visitor" data — no public dataset pairs anonymous
-web traffic with this kind of billing data, and at a real company that data
-usually lives in a separate web-analytics tool anyway, not the product
-database. When we build that page (Module 8), I'll propose
-*Signup → Trial Started → Activated → Paid* instead — swapping "Visitor" for
-"Activated" (used ≥1 key feature during the trial), which is both honest to
-what we can actually measure from these four tables and a more standard
-product-led-growth metric. Flagging it here so it isn't a surprise later.
+## Metric definitions
+
+- **Activation:** at least one feature event during the 14-day trial.
+- **Paid:** a non-null `paid_date`.
+- **Retained funnel stage:** accounts with snapshot status `active`.
+- **Cohort retention:** users active in a calendar month, divided by the signup cohort size. Period 0 is the signup month and need not equal 100%.
+- **Day-7 and day-30 retention:** activity on the exact day after signup, rather than permanent subscription retention.
+
+The dashboard funnel is Signed Up -> Activated -> Paid -> Retained. There is no visitor stage because the schema contains no pre-signup traffic. Trial start coincides with signup, so it is not shown as a separate stage.
+
+## Interpretation
+
+Usage and channel generation depend on the known churn outcome. Subscription history is incomplete, and model eligibility can use information observed after the prediction cutoff. Model scores and segment comparisons apply to this simulation. Independent event and subscription histories would be required for prospective prediction or causal business conclusions.
+
+Report filters exclude dates after the snapshot, but the underlying generator boundaries and database load still require correction. See the [validation and release checklist](FINISHING_CHECKLIST.md).

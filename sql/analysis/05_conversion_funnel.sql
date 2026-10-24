@@ -1,19 +1,7 @@
--- ============================================================
--- Conversion Funnel
--- ============================================================
--- The brief's "Visitor -> Signup -> Trial -> Paid" funnel can't be
--- built from this schema exactly as specified: there's no pre-signup
--- traffic data in these four tables (see docs/data_dictionary.md,
--- "Known deviation"). Real product databases have the same gap —
--- that data lives in a separate web-analytics tool, not here.
---
--- Adapted to four stages this schema CAN measure:
---   Signed Up -> Activated -> Paid -> Retained (active today)
--- "Trial Started" is dropped too: trial_start always equals
--- signup_date in this model (the trial begins immediately), so it
--- would just repeat the Signed Up count with no new information.
--- "Activated" (used >=1 feature during the 14-day trial) is a
--- standard, more useful product-led-growth substitute.
+-- Conversion funnel: Signed Up -> Activated -> Paid -> Retained.
+-- Activation requires a feature event during the 14-day trial. Retained
+-- means active at the snapshot. Trial start coincides with signup, and the
+-- schema has no pre-signup visitor data. Stage counts overlap.
 
 WITH funnel_base AS (
     SELECT
